@@ -187,7 +187,26 @@ export function CrearCitaForm({
 
     try {
       const citaCreada = await createCitaRecepcion(nuevaCita);
-      onNuevaCita(citaCreada);
+
+      // Fusionar campos faltantes para la UI inmediatamente
+      const citaDetallada: CitaDetalle = {
+        id_cita: String(citaCreada.id_cita ?? ""),
+        numero_seguimiento: String(citaCreada.numero_seguimiento ?? ""),
+        estado_cita: "confirmada",
+        tipo_cita: formData.tipo_cita,
+        paciente_nombre: `${paciente.nombre} ${paciente.apellido}`,
+        medico_nombre: medico.nombre_completo ?? "",
+        especialidad: especialidad.nombre_especialidad ?? "",
+        fecha_solicitud: nuevaCita.fecha_solicitud,
+        fecha_cita: formData.fecha_cita,
+        hora_cita: formData.hora_cita,
+        preferencia_turno: obtenerTurno(formData.hora_cita),
+        tipo_solicitud: "presencial",
+        fecha_confirmacion: new Date().toISOString().split("T")[0],
+        id_medico: String(formData.id_medico),
+      };
+
+      onNuevaCita(citaDetallada);
 
       // Guardar datos para el diálogo de confirmación
       setCitaCreada(citaCreada);

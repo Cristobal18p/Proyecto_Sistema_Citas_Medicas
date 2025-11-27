@@ -229,13 +229,7 @@ export const cancelarCita = async (numero_seguimiento, cancelado_por) => {
   return result.rows[0];
 };
 
-
-
-export const confirmarCita = async (
-  id_cita ,  
-  fecha_cita,   
-  hora_cita       
-) => {
+export const confirmarCita = async (id_cita, fecha_cita, hora_cita) => {
   const result = await pool.query(
     `UPDATE citas
      SET estado = 'confirmada',
@@ -261,7 +255,6 @@ export const confirmarCita = async (
 
   return result.rows[0] || null;
 };
-
 
 export const getCitas = async () => {
   const result = await pool.query(`
@@ -331,4 +324,57 @@ export const updateCita = async (
   const result = await pool.query(query, values);
 
   return result.rows[0] || null;
+};
+
+export const updateEstadoCita = async (id_cita, nuevoEstado) => {
+  const estadosValidos = ["pendiente", "confirmada", "cancelada", "atendida"];
+  if (!estadosValidos.includes(nuevoEstado)) {
+    throw new Error("Estado inválido");
+  }
+  const result = await pool.query(
+    `UPDATE citas SET estado = $2
+     WHERE id_cita = $1
+     RETURNING 
+       id_cita,
+       numero_seguimiento,
+       estado AS estado_cita,
+       tipo_cita,
+       TO_CHAR(fecha_solicitud, 'YYYY-MM-DD') AS fecha_solicitud,
+       TO_CHAR(fecha_cita, 'YYYY-MM-DD') AS fecha_cita,
+       TO_CHAR(hora_cita, 'HH24:MI') AS hora_cita,
+       preferencia_turno,
+       tipo_solicitud,
+       TO_CHAR(fecha_confirmacion, 'YYYY-MM-DD') AS fecha_confirmacion,
+       cancelado_por,
+       id_medico`,
+    [id_cita, nuevoEstado]
+  );
+  return result.rows[0] || null;
+};
+
+export const obtenerCitasPorMedico = async (id_medico) => {
+  const result = await pool.query(
+    `SELECT 
+      c.id_cita,
+      c.numero_seguimiento,
+      c.estado AS estado_cita,
+      c.tipo_cita,
+      TO_CHAR(c.fecha_solicitud, 'YYYY-MM-DD') AS fecha_solicitud,
+      TO_CHAR(c.fecha_cita, 'YYYY-MM-DD') AS fecha_cita,
+      TO_CHAR(c.hora_cita, 'HH24:MI') AS hora_cita,
+      p.nombre || ' ' || p.apellido AS paciente_nombre,
+      c.id_medico,
+      p.id_paciente,
+      e.nombre_especialidad AS especialidad,
+      TO_CHAR(c.fecha_confirmacion, 'YYYY-MM-DD') AS fecha_confirmacion
+    FROM citas c
+    JOIN pacientes p ON c.id_paciente = p.id_paciente 
+    JOIN medicos m On c.id_medico = m.id_medico
+    JOIN especialidades e ON e.id_especialidad = m.id_especialidad
+    WHERE c.id_medico = $1 AND c.estado IN ('confirmada', 'atendida')
+    ORDER BY c.fecha_cita ASC, c.hora_cita ASC`,
+    [id_medico]
+  );
+
+  return result.rows;
 };

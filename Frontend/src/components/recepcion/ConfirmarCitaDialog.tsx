@@ -209,7 +209,7 @@ export function ConfirmarCitaDialog({
     console.log("id_cita:", cita?.id_cita);
     console.log("fechaSeleccionada:", fechaSeleccionada);
     console.log("horaSeleccionada:", horaSeleccionada);
-    
+
     if (!cita || !fechaSeleccionada || !horaSeleccionada) {
       toast.error("Debe seleccionar fecha y hora");
       return;
@@ -224,13 +224,13 @@ export function ConfirmarCitaDialog({
     try {
       setConfirmando(true);
       const fechaFormateada = fechaSeleccionada.toISOString().split("T")[0];
-      
+
       console.log("Llamando API confirmarCita con:", {
         id_cita: cita.id_cita,
         fecha_cita: fechaFormateada,
         hora_cita: horaSeleccionada,
       });
-      
+
       const citaConfirmada = await confirmarCita(
         cita.id_cita,
         fechaFormateada,
@@ -238,7 +238,8 @@ export function ConfirmarCitaDialog({
       );
 
       console.log("Cita confirmada:", citaConfirmada);
-      onConfirmar(citaConfirmada);
+      // Fusionar con la cita original para conservar nombres y datos derivados
+      onConfirmar({ ...cita, ...citaConfirmada });
       toast.success("Cita confirmada exitosamente");
       onOpenChange(false);
     } catch (error) {
@@ -454,7 +455,11 @@ export function ConfirmarCitaDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={confirmando}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={confirmando}
+          >
             Cancelar
           </Button>
           <Button

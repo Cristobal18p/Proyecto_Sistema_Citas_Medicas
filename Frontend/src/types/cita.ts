@@ -7,7 +7,7 @@ export interface Cita {
   fecha_cita?: string;
   hora_cita?: string;
   tipo_cita?: "nueva" | "control";
-  estado_cita?: "pendiente" | "confirmada" | "atendido" | "cancelada";
+  estado_cita?: "pendiente" | "confirmada" | "atendida" | "cancelada";
   fecha_solicitud: string;
   fecha_atencion?: string;
   tipo_solicitud?: "presencial" | "telefonica" | "web";
@@ -37,7 +37,7 @@ export interface CitaDetalle {
   id_cita: string;
 
   numero_seguimiento: string;
-  estado_cita: "pendiente" | "confirmada" | "atendido" | "cancelada";
+  estado_cita: "pendiente" | "confirmada" | "atendida" | "cancelada";
   tipo_cita: "nueva" | "control";
 
   // Datos de paciente y médico
@@ -56,4 +56,14 @@ export interface CitaDetalle {
   fecha_confirmacion?: string;
   cancelado_por?: "paciente" | "recepcion";
   id_medico: string;
+}
+
+
+export interface HistorialConsulta {
+  // En mi base de datos
+  id_consulta?: string;
+  id_cita: string;
+  sintomas: string;
+  diagnostico: string;
+  tratamiento: string;
 }

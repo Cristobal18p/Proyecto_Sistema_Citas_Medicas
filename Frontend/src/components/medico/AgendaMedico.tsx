@@ -9,47 +9,52 @@ import {
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Cita } from "../../lib/mockData";
+import { CitaDetalle } from "../../types/cita";
 import { Calendar, Clock, CheckCircle, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { actualizarEstadoCita } from "../../services/citas";
 
 interface AgendaMedicoProps {
-  citas: Cita[];
-  onActualizarCita: (cita: Cita) => void;
+  citas: CitaDetalle[];
+  onActualizarCita: (cita: CitaDetalle) => void;
 }
 
 export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
   const hoy = new Date().toLocaleDateString("sv-SE");
 
   const citasHoy = citas.filter(
-    (c) => c.fecha_cita === hoy && c.estado == "confirmada"
+    (c) => c.fecha_cita === hoy && c.estado_cita === "confirmada"
   );
 
   const citasProximas = citas.filter(
-    (c) => new Date(c.fecha_cita) > new Date(hoy) && c.estado === "confirmada"
+    (c) =>
+      new Date(c.fecha_cita!) > new Date(hoy) && c.estado_cita === "confirmada"
   );
 
   const citasAtendidas = citas.filter(
-    (c) => new Date(c.fecha_cita) >= new Date(hoy) && c.estado === "atendido"
+    (c) =>
+      new Date(c.fecha_cita!) >= new Date(hoy) && c.estado_cita === "atendida"
   );
 
-  const marcarComoAtendido = (cita: Cita) => {
-    const citaActualizada = {
-      ...cita,
-      estado: "atendido" as const,
-    };
-    onActualizarCita(citaActualizada);
-    toast.success("Paciente marcado como atendido");
+  const marcarComoAtendido = async (cita: CitaDetalle) => {
+    try {
+      const actualizado = await actualizarEstadoCita(cita.id_cita, "atendida");
+      onActualizarCita({ ...cita, estado_cita: actualizado.estado_cita });
+      toast.success("Paciente marcado como atendido");
+    } catch (error) {
+      console.error("Error al actualizar estado:", error);
+      toast.error("No se pudo marcar la cita como atendida");
+    }
   };
 
-  function agruparPorFecha(citas: Cita[]) {
+  function agruparPorFecha(citas: CitaDetalle[]) {
     return citas.reduce((acc, cita) => {
-      if (!acc[cita.fecha_cita]) {
-        acc[cita.fecha_cita] = [];
+      if (!acc[cita.fecha_cita!]) {
+        acc[cita.fecha_cita!] = [];
       }
-      acc[cita.fecha_cita].push(cita);
+      acc[cita.fecha_cita!].push(cita);
       return acc;
-    }, {} as Record<string, Cita[]>);
+    }, {} as Record<string, CitaDetalle[]>);
   }
 
   const getEstadoBadge = (estado: string) => {
@@ -70,12 +75,12 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
           Confirmada
         </Badge>
       ),
-      atendido: (
+      atendida: (
         <Badge
           variant="outline"
           className="bg-blue-50 text-blue-700 border-blue-200"
         >
-          Atendido
+          Atendida
         </Badge>
       ),
       cancelada: (
@@ -90,7 +95,6 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
     return badges[estado as keyof typeof badges];
   };
 
-  // Función para formatear hora en 12 horas con AM/PM
   const formatHora = (hora: string) => {
     const [h, m] = hora.split(":").map(Number);
     const date = new Date();
@@ -102,18 +106,18 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
     });
   };
 
-  // Función para convertir string de fecha a objeto Date en zona horaria local
   const toLocalDate = (fechaString: string) => {
     const [year, month, day] = fechaString.split("-").map(Number);
     return new Date(year, month - 1, day);
   };
 
   const citasProximasAgrupadas = agruparPorFecha(citasProximas);
+
   const CitaCard = ({
     cita,
     mostrarBoton,
   }: {
-    cita: Cita;
+    cita: CitaDetalle;
     mostrarBoton: boolean;
   }) => (
     <div className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
@@ -121,9 +125,9 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md">
-              {formatHora(cita.hora_cita)}
+              {formatHora(cita.hora_cita!)}
             </span>
-            {getEstadoBadge(cita.estado)}
+            {getEstadoBadge(cita.estado_cita)}
             <Badge variant="outline" className="text-xs">
               {cita.tipo_cita === "nueva" ? "Nueva" : "Control"}
             </Badge>
@@ -137,14 +141,14 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
           </div>
         </div>
 
-        {mostrarBoton && cita.estado !== "atendido" && (
+        {mostrarBoton && cita.estado_cita !== "atendida" && (
           <Button
             size="sm"
             className="gap-2"
             onClick={() => marcarComoAtendido(cita)}
           >
             <CheckCircle className="w-4 h-4" />
-            Marcar Atendido
+            Marcar Atendida
           </Button>
         )}
       </div>
@@ -174,7 +178,6 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
             </TabsTrigger>
           </TabsList>
 
-          {/* Hoy */}
           <TabsContent value="hoy" className="space-y-3">
             {citasHoy.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
@@ -183,7 +186,7 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
               </div>
             ) : (
               citasHoy
-                .sort((a, b) => a.hora_cita.localeCompare(b.hora_cita))
+                .sort((a, b) => a.hora_cita!.localeCompare(b.hora_cita!))
                 .map((cita) => (
                   <CitaCard
                     key={cita.id_cita}
@@ -194,7 +197,6 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
             )}
           </TabsContent>
 
-          {/* Próximas */}
           <TabsContent value="proximas" className="space-y-3">
             {Object.entries(citasProximasAgrupadas).map(
               ([fecha, citasDelDia]) => (
@@ -209,7 +211,7 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
                     })}
                   </p>
                   {citasDelDia
-                    .sort((a, b) => a.hora_cita.localeCompare(b.hora_cita))
+                    .sort((a, b) => a.hora_cita!.localeCompare(b.hora_cita!))
                     .map((cita) => (
                       <CitaCard
                         key={cita.id_cita}
@@ -222,19 +224,18 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
             )}
           </TabsContent>
 
-          {/* Atendidas */}
           <TabsContent value="atendidas" className="space-y-3">
             {citasAtendidas.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>No hay pacientes atendidos</p>
+                <p>No hay pacientes atendidas</p>
               </div>
             ) : (
               citasAtendidas
                 .sort(
                   (a, b) =>
-                    new Date(b.fecha_cita).getTime() -
-                    new Date(a.fecha_cita).getTime()
+                    new Date(b.fecha_cita!).getTime() -
+                    new Date(a.fecha_cita!).getTime()
                 )
                 .map((cita) => (
                   <CitaCard
@@ -263,7 +264,8 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
               <p className="text-2xl text-green-600">
                 {
                   citas.filter(
-                    (c) => c.fecha_cita === hoy && c.estado === "confirmada"
+                    (c) =>
+                      c.fecha_cita === hoy && c.estado_cita === "confirmada"
                   ).length
                 }
               </p>
@@ -275,11 +277,11 @@ export function AgendaMedico({ citas, onActualizarCita }: AgendaMedicoProps) {
               <p className="text-2xl text-yellow-600">
                 {
                   citas.filter(
-                    (c) => c.fecha_cita === hoy && c.estado === "atendido"
+                    (c) => c.fecha_cita === hoy && c.estado_cita === "atendida"
                   ).length
                 }
               </p>
-              <p className="text-sm text-gray-600">Atendidos</p>
+              <p className="text-sm text-gray-600">Atendidas</p>
             </div>
           </div>
         </div>

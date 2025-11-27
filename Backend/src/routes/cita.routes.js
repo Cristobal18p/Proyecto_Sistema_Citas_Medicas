@@ -5,7 +5,10 @@ import {
   obtenerCitas,
   cancelarCitaController,
   getCitas,
-  updateCitaController, confirmarCitaController
+  updateCitaController,
+  confirmarCitaController,
+  getCitasMedicos,
+  actualizarEstadoCitaController,
 } from "../controllers/cita.controller.js";
 
 const router = express.Router();
@@ -19,9 +22,10 @@ router.get("/", obtenerCitas);
 router.get("/todas", getCitas);
 // Actualizar una cita por id (relativo al prefijo /api/citas)
 router.put("/:id", updateCitaController);
+// Actualizar sólo el estado
+router.put("/:id/estado", actualizarEstadoCitaController);
 // Confirmar cita
 router.put("/:id_cita/confirmar", confirmarCitaController);
 
-
+router.get("/medico/:id_medico", getCitasMedicos);
 export default router;
-

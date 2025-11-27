@@ -27,6 +27,16 @@ export function TodasLasCitas({ citas }: TodasLasCitasProps) {
   const [filtroEstado, setFiltroEstado] = useState<string>("todas");
   const [busqueda, setBusqueda] = useState("");
 
+  const to12h = (hora?: string) => {
+    if (!hora) return "";
+    const [hhStr, mmStr] = hora.split(":");
+    const hh = parseInt(hhStr, 10);
+    const mm = parseInt(mmStr, 10);
+    const period = hh < 12 ? "AM" : "PM";
+    const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
+    return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
+  };
+
   const getEstadoBadge = (estado: string) => {
     const badges = {
       pendiente: (
@@ -45,12 +55,12 @@ export function TodasLasCitas({ citas }: TodasLasCitasProps) {
           Confirmada
         </Badge>
       ),
-      atendido: (
+      atendida: (
         <Badge
           variant="outline"
           className="bg-blue-50 text-blue-700 border-blue-200"
         >
-          Atendido
+          Atendida
         </Badge>
       ),
       cancelada: (
@@ -121,7 +131,7 @@ export function TodasLasCitas({ citas }: TodasLasCitasProps) {
               <SelectItem value="todas">Todos los Estados</SelectItem>
               <SelectItem value="pendiente">Pendiente</SelectItem>
               <SelectItem value="confirmada">Confirmada</SelectItem>
-              <SelectItem value="atendido">Atendido</SelectItem>
+              <SelectItem value="atendida">Atendida</SelectItem>
               <SelectItem value="cancelada">Cancelada</SelectItem>
             </SelectContent>
           </Select>
@@ -149,7 +159,7 @@ export function TodasLasCitas({ citas }: TodasLasCitasProps) {
                         ? `${cita.fecha_cita
                             .split("-")
                             .reverse()
-                            .join("/")} - ${cita.hora_cita}`
+                            .join("/")} - ${to12h(cita.hora_cita)}`
                         : "Sin fecha/ hora asignada"}
                     </span>
                   </div>
@@ -210,7 +220,7 @@ export function TodasLasCitas({ citas }: TodasLasCitasProps) {
             </div>
             <div>
               <p className="text-2xl text-gray-600">
-                {citas.filter((c) => c.estado_cita === "atendido").length}
+                {citas.filter((c) => c.estado_cita === "atendida").length}
               </p>
               <p className="text-sm text-gray-600">Atendidas</p>
             </div>

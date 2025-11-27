@@ -59,7 +59,7 @@ export const cancelarCitaController = async (req, res) => {
   const { numero } = req.params;
   const { cancelado_por } = req.body;
 
- if (!["paciente", "recepcion"].includes(cancelado_por)) {
+  if (!["paciente", "recepcion"].includes(cancelado_por)) {
     return res.status(400).json({ message: "Origen de cancelación inválido" });
   }
 
@@ -77,17 +77,22 @@ export const cancelarCitaController = async (req, res) => {
   }
 };
 
-
 export const confirmarCitaController = async (req, res) => {
   const { id_cita } = req.params;
   const { fecha_cita, hora_cita } = req.body;
 
   if (!fecha_cita || !hora_cita) {
-    return res.status(400).json({ message: "Debe enviar fecha_cita y hora_cita" });
+    return res
+      .status(400)
+      .json({ message: "Debe enviar fecha_cita y hora_cita" });
   }
 
   try {
-    const citaConfirmada = await CitaModel.confirmarCita(id_cita, fecha_cita, hora_cita);
+    const citaConfirmada = await CitaModel.confirmarCita(
+      id_cita,
+      fecha_cita,
+      hora_cita
+    );
 
     if (!citaConfirmada) {
       return res.status(404).json({ message: "Cita no encontrada" });
@@ -99,8 +104,6 @@ export const confirmarCitaController = async (req, res) => {
     res.status(500).json({ message: "Error al confirmar la cita" });
   }
 };
-
-
 
 export const getCitas = async (req, res) => {
   try {
@@ -133,6 +136,43 @@ export const updateCitaController = async (req, res) => {
     });
   } catch (error) {
     console.error("Error al actualizar cita:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+export const actualizarEstadoCitaController = async (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body;
+  if (!estado) return res.status(400).json({ message: "Debe enviar estado" });
+  try {
+    const citaActualizada = await CitaModel.updateEstadoCita(id, estado);
+    if (!citaActualizada)
+      return res.status(404).json({ message: "Cita no encontrada" });
+    res.json(citaActualizada);
+  } catch (err) {
+    console.error("Error al actualizar estado cita:", err);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+export const getCitasMedicos = async (req, res) => {
+  const { id_medico } = req.params;
+
+  try {
+    const citas = await CitaModel.obtenerCitasPorMedico(id_medico);
+
+    if (!citas || citas.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No se encontraron citas para este médico" });
+    }
+
+    res.json({
+      message: "Citas obtenidas correctamente",
+      citas,
+    });
+  } catch (error) {
+    console.error("Error al obtener citas del médico:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };

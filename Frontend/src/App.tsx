@@ -58,15 +58,34 @@ export default function App() {
     switch (currentUser.rol.toLowerCase()) {
       case "recepcionista":
         return (
-          <RecepcionDashboard user={currentUser} onLogout={handleLogout} />
+          <>
+            <Toaster position="top-right" richColors />
+            <RecepcionDashboard user={currentUser} onLogout={handleLogout} />
+          </>
         );
       case "medico":
-        return <MedicoDashboard user={currentUser} onLogout={handleLogout} />;
+        return (
+          <>
+            <Toaster position="top-right" richColors />
+            <MedicoDashboard user={currentUser} onLogout={handleLogout} />
+          </>
+        );
       case "gerente":
-        return <GerenteDashboard user={currentUser} onLogout={handleLogout} />;
+        return (
+          <>
+            <Toaster position="top-right" richColors />
+            <GerenteDashboard user={currentUser} onLogout={handleLogout} />
+          </>
+        );
       case "admin":
         return (
-          <AdministradorDashboard user={currentUser} onLogout={handleLogout} />
+          <>
+            <Toaster position="top-right" richColors />
+            <AdministradorDashboard
+              user={currentUser}
+              onLogout={handleLogout}
+            />
+          </>
         );
       default:
         return (

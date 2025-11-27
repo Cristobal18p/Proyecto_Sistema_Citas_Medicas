@@ -64,7 +64,7 @@ export function ValidacionIdentidad({
           <Input
             className="mt-2"
             id="cedula"
-            placeholder="10-1112-1243"
+            placeholder="8-123-456"
             value={cedula}
             onChange={(e) => {
               const value = e.target.value;

@@ -1,5 +1,5 @@
 import { API_URL } from "../config";
-import { CreateCita, CitaDetalle } from "../types/cita";
+import { CreateCita, CitaDetalle, HistorialConsulta } from "../types/cita";
 
 // Obtener todas las citas
 export async function getCitas(): Promise<CitaDetalle[]> {
@@ -69,3 +69,18 @@ export async function confirmarCita(
   if (!res.ok) throw new Error("Error al confirmar cita");
   return res.json();
 }
+
+
+
+// API pensados para el dashboard del medico
+export const obtenerCitasPorMedico = async (id_medico: string): Promise<CitaDetalle[]> => {
+  const res = await fetch(`${API_URL}/api/citas/medico/${id_medico}`);
+
+  if (!res.ok) {
+    throw new Error("Error al obtener citas del médico");
+  }
+
+  const data = await res.json();
+  return data.citas;
+};
+

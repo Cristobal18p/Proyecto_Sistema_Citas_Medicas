@@ -1,16 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Usuario } from "../types/login";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
-import { LogOut, Calendar, ClipboardList } from "lucide-react";
+import { LogOut, Calendar, ClipboardList, Clock } from "lucide-react";
 import { AgendaMedico } from "./medico/AgendaMedico";
 import { HistorialPacientes } from "./medico/HistorialPacientes";
-import {
-  mockCitas,
-  mockHistorialConsultas,
-  Cita,
-  HistorialConsulta,
-} from "../lib/mockData";
+import { obtenerCitasPorMedico } from "../services/citas";
+import { CitaDetalle, HistorialConsulta } from "../types/cita";
+import { getHistoriales } from "../services/historial";
+import { toast } from "sonner";
 
 interface MedicoDashboardProps {
   user: Usuario;
@@ -18,37 +16,68 @@ interface MedicoDashboardProps {
 }
 
 export function MedicoDashboard({ user, onLogout }: MedicoDashboardProps) {
-  const [citas, setCitas] = useState<Cita[]>(mockCitas);
-  const [historial, setHistorial] = useState<HistorialConsulta[]>(
-    mockHistorialConsultas
-  );
+  const [citas, setCitas] = useState<CitaDetalle[]>([]);
+  const [historial, setHistorial] = useState<HistorialConsulta[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filtrar citas del médico
-  const citasMedico = citas.filter((c) => c.id_medico === user.id_medico);
+  console.log("ID del médico recibido:", user.id_medico);
 
-  const handleActualizarCita = (citaActualizada: Cita) => {
-    setCitas(
-      citas.map((c) =>
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        // Cargar citas del médico
+        const dataCitas: CitaDetalle[] = await obtenerCitasPorMedico(
+          user.id_medico
+        );
+        setCitas(dataCitas);
+        console.log("Citas del médico cargadas:", dataCitas);
+
+        // Cargar historiales
+        const dataHistorial: HistorialConsulta[] = await getHistoriales();
+        setHistorial(dataHistorial);
+        console.log("Historiales cargados:", dataHistorial);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+        toast.error("No se pudieron cargar los datos del médico");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, [user.id_medico]);
+  const handleActualizarCita = (citaActualizada: CitaDetalle) => {
+    setCitas((prev) =>
+      prev.map((c) =>
         c.id_cita === citaActualizada.id_cita ? citaActualizada : c
       )
     );
   };
 
   const handleNuevoHistorial = (nuevoHistorial: HistorialConsulta) => {
-    setHistorial([...historial, nuevoHistorial]);
+    setHistorial((prev) => [...prev, nuevoHistorial]);
   };
 
   const handleActualizarHistorial = (
     historialActualizado: HistorialConsulta
   ) => {
-    setHistorial(
-      historial.map((h) =>
+    setHistorial((prev) =>
+      prev.map((h) =>
         h.id_consulta === historialActualizado.id_consulta
           ? historialActualizado
           : h
       )
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        <Clock className="w-12 h-12 mr-3 text-gray-400" />
+        <p>Cargando agenda del médico...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
@@ -66,9 +95,7 @@ export function MedicoDashboard({ user, onLogout }: MedicoDashboardProps) {
                 <h1 className="text-xl font-bold text-blue-900">
                   Panel Médico
                 </h1>
-                <p className="text-sm text-gray-600">
-                  {user.nombre_completo}
-                </p>
+                <p className="text-sm text-gray-600">{user.nombre_completo}</p>
               </div>
             </div>
             <Button
@@ -99,14 +126,14 @@ export function MedicoDashboard({ user, onLogout }: MedicoDashboardProps) {
 
           <TabsContent value="agenda">
             <AgendaMedico
-              citas={citasMedico}
+              citas={citas}
               onActualizarCita={handleActualizarCita}
             />
           </TabsContent>
 
           <TabsContent value="historial">
             <HistorialPacientes
-              citas={citasMedico}
+              citas={citas}
               historial={historial}
               onNuevoHistorial={handleNuevoHistorial}
               onActualizarHistorial={handleActualizarHistorial}
