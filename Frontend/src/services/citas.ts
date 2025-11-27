@@ -1,9 +1,10 @@
 import { API_URL } from "../config";
-import { CreateCita, CitaDetalle} from "../types/cita";
+import { CreateCita, CitaDetalle } from "../types/cita";
 
 // Obtener todas las citas
 export async function getCitas(): Promise<CitaDetalle[]> {
-  const res = await fetch(`${API_URL}/api/citas`);
+  // Usamos el endpoint con formato consistente (YYYY-MM-DD, HH24:MI)
+  const res = await fetch(`${API_URL}/api/citas/todas`);
   if (!res.ok) throw new Error("Error al obtener citas");
   return res.json();
 }
