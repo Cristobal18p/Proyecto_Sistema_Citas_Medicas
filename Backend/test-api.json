@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "Sistema de Citas - Test API",
+    "description": "Colección de pruebas para el API de citas médicas",
+    "baseUrl": "http://localhost:3000"
+  },
+  "tests": {
+    "pacientes": {
+      "crear_paciente": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/pacientes/crear",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "nombre": "Juan",
+          "apellido": "Pérez",
+          "cedula": "0801199012345",
+          "fecha_nacimiento": "1990-05-15",
+          "telefono": "98765432",
+          "email": "juan.perez@email.com"
+        }
+      },
+      "validar_paciente": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/pacientes/validar",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cedula": "0801199012345",
+          "fecha_nacimiento": "1990-05-15"
+        }
+      }
+    },
+    "citas": {
+      "crear_cita_paciente": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/citas",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id_paciente": "1",
+          "id_medico": "1",
+          "fecha_solicitud": "2025-11-22",
+          "tipo_cita": "nueva",
+          "preferencia_turno": "AM",
+          "tipo_solicitud": "web",
+          "creado_por": "paciente"
+        }
+      },
+      "crear_cita_recepcion": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/citas",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id_paciente": "1",
+          "id_medico": "1",
+          "fecha_solicitud": "2025-11-22",
+          "tipo_cita": "control",
+          "preferencia_turno": "PM",
+          "tipo_solicitud": "presencial",
+          "creado_por": "recepcion",
+          "fecha_cita": "2025-11-25",
+          "hora_cita": "14:30"
+        }
+      },
+      "consultar_cita_por_seguimiento": {
+        "method": "GET",
+        "url": "http://localhost:3000/api/citas/seguimiento/SEG-2025-001",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "obtener_todas_citas": {
+        "method": "GET",
+        "url": "http://localhost:3000/api/citas",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "filtrar_citas_por_paciente": {
+        "method": "GET",
+        "url": "http://localhost:3000/api/citas?paciente=Juan",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "filtrar_citas_por_medico": {
+        "method": "GET",
+        "url": "http://localhost:3000/api/citas?medico=García",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "filtrar_citas_por_especialidad": {
+        "method": "GET",
+        "url": "http://localhost:3000/api/citas?especialidad=Cardiología",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "cancelar_cita_paciente": {
+        "method": "PUT",
+        "url": "http://localhost:3000/api/citas/SEG-2025-001/cancelar",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cancelado_por": "paciente"
+        }
+      },
+      "cancelar_cita_recepcion": {
+        "method": "PUT",
+        "url": "http://localhost:3000/api/citas/SEG-2025-001/cancelar",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cancelado_por": "recepcion"
+        }
+      }
+    }
+  },
+  "instrucciones": {
+    "uso": "Para probar en Thunder Client, Postman o similar:",
+    "pasos": [
+      "1. Asegúrate que el backend esté corriendo en http://localhost:3000",
+      "2. Primero crea un paciente con POST /api/pacientes/crear",
+      "3. Valida el paciente con POST /api/pacientes/validar",
+      "4. Crea una cita usando el id_paciente obtenido",
+      "5. Consulta la cita con el número de seguimiento retornado",
+      "6. Prueba cancelar la cita si está en estado pendiente"
+    ],
+    "notas": [
+      "- Ajusta los IDs según los registros de tu base de datos",
+      "- El número de seguimiento se genera automáticamente al crear una cita",
+      "- Solo citas 'pendiente' pueden ser canceladas por pacientes",
+      "- Recepción puede cancelar citas en cualquier estado"
+    ]
+  }
+}

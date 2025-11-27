@@ -1,0 +1,60 @@
+# Archivo Git ignore específico para este proyecto
+
+# ===== Dependencias (monorepo Backend/Frontend) =====
+node_modules/
+Backend/node_modules/
+Frontend/node_modules/
+
+# ===== Entornos =====
+.env
+.env.*
+Backend/.env
+Frontend/.env
+
+# ===== Builds y artefactos de bundling =====
+dist/
+build/
+out/
+Frontend/dist/
+Frontend/.vite/
+
+# ===== Logs =====
+*.log
+logs/
+Backend/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Cobertura de pruebas =====
+coverage/
+Backend/coverage/
+Frontend/coverage/
+
+# ===== IDE y herramientas =====
+.vscode/
+.idea/
+
+# ===== Temporales =====
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== Cachés de paquetes =====
+.npm/
+.pnpm-store/
+.yarn/
+
+# ===== Mapas de fuente generados =====
+public/**/*.map
+Frontend/public/**/*.map
+
+# ===== Base de datos =====
+# Mantener archivos .sql del directorio Database (seguimiento permitido)
+# Ignorar respaldos temporales
+Database/**/*~
+Database/**/*.bak
+Database/**/*.old
