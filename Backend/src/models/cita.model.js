@@ -137,6 +137,9 @@ export const getDetalleCitaPorSeguimiento = async (numero_seguimiento) => {
       c.preferencia_turno,
       TO_CHAR(c.fecha_solicitud, 'DD/MM/YYYY') AS fecha_solicitud,
       TO_CHAR(c.fecha_confirmacion, 'DD/MM/YYYY') AS fecha_confirmacion,
+      p.nombre AS nombre_paciente,
+      p.apellido AS apellido_paciente,
+      p.email AS email_paciente,
       p.nombre || ' ' || p.apellido AS paciente_nombre,
       u.nombre || ' ' || u.apellido AS medico_nombre,
       e.nombre_especialidad AS especialidad

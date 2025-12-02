@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Login } from "../types/login";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LogOut, Calendar, BarChart3, Clock } from "lucide-react";
 import { DisponibilidadMedicos } from "./gerente/DisponibilidadMedicos";
 import { ReportesGerente } from "./gerente/ReportesGerente";
+import { Disponibilidad, CrearDisponibilidad } from "../types/disponibilidad";
+import { DiaSemana } from "../types/disponibilidad";
+import { CitaDetalle } from "../types/cita";
 import {
-  mockDisponibilidad,
-  mockCitas,
-  DisponibilidadMedico,
-} from "../lib/mockData";
+  getDisponibilidad,
+  createDisponibilidad,
+  deleteDisponibilidad,
+} from "../services/disponibilidad";
+import { getCitas } from "../services/citas";
+import { toast } from "sonner";
 
 interface GerenteDashboardProps {
   user: Login;
@@ -17,16 +22,89 @@ interface GerenteDashboardProps {
 }
 
 export function GerenteDashboard({ user, onLogout }: GerenteDashboardProps) {
-  const [disponibilidad, setDisponibilidad] =
-    useState<DisponibilidadMedico[]>(mockDisponibilidad);
+  const [disponibilidad, setDisponibilidad] = useState<Disponibilidad[]>([]);
+  const [citas, setCitas] = useState<CitaDetalle[]>([]);
+  const [cargando, setCargando] = useState(true);
 
-  const handleNuevaDisponibilidad = (nueva: DisponibilidadMedico) => {
-    setDisponibilidad([...disponibilidad, nueva]);
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      setCargando(true);
+      const [dispData, citasData] = await Promise.all([
+        getDisponibilidad(),
+        getCitas(),
+      ]);
+
+      // Normalizar dia_semana a minúsculas y sin tildes
+      const normalizarDia = (dia: string): string => {
+        return dia
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, ""); // Eliminar tildes
+      };
+
+      const dispNormalizada = dispData.map((d) => ({
+        ...d,
+        dia_semana: normalizarDia(d.dia_semana) as DiaSemana,
+        id_medico: String(d.id_medico),
+        id_disponibilidad: String(d.id_disponibilidad),
+      }));
+      setDisponibilidad(dispNormalizada);
+      setCitas(citasData);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      toast.error("Error al cargar datos del sistema");
+    } finally {
+      setCargando(false);
+    }
   };
 
-  const handleEliminarDisponibilidad = (id: string) => {
-    setDisponibilidad(disponibilidad.filter((d) => d.id_disponibilidad !== id));
+  const handleNuevaDisponibilidad = async (nueva: CrearDisponibilidad) => {
+    try {
+      // Capitalizar dia_semana para enviarlo a la BD (Lunes, Martes, etc.)
+      const diaNormalizado =
+        nueva.dia_semana.charAt(0).toUpperCase() + nueva.dia_semana.slice(1);
+      const nuevaNormalizada: any = {
+        ...nueva,
+        dia_semana: diaNormalizado,
+      };
+
+      const creada = await createDisponibilidad(nuevaNormalizada);
+      setDisponibilidad([...disponibilidad, creada]);
+      toast.success("Disponibilidad creada exitosamente");
+      await cargarDatos(); // Recargar para sincronizar
+    } catch (error) {
+      console.error("Error al crear disponibilidad:", error);
+      toast.error("Error al crear disponibilidad");
+    }
   };
+
+  const handleEliminarDisponibilidad = async (id: string) => {
+    try {
+      await deleteDisponibilidad(id);
+      setDisponibilidad(
+        disponibilidad.filter((d) => d.id_disponibilidad !== id)
+      );
+      toast.success("Disponibilidad eliminada");
+    } catch (error) {
+      console.error("Error al eliminar disponibilidad:", error);
+      toast.error("Error al eliminar disponibilidad");
+    }
+  };
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
@@ -85,10 +163,7 @@ export function GerenteDashboard({ user, onLogout }: GerenteDashboardProps) {
           </TabsContent>
 
           <TabsContent value="reportes">
-            <ReportesGerente
-              citas={mockCitas}
-              disponibilidad={disponibilidad}
-            />
+            <ReportesGerente citas={citas} disponibilidad={disponibilidad} />
           </TabsContent>
         </Tabs>
       </main>

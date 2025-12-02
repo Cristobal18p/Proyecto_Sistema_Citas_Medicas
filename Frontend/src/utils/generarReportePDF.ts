@@ -1,8 +1,9 @@
-import { Cita, DisponibilidadMedico } from '../lib/mockData';
+import { CitaDetalle } from '../types/cita';
+import { Disponibilidad } from '../types/disponibilidad';
 
 interface DatosReporte {
-  citas: Cita[];
-  disponibilidad: DisponibilidadMedico[];
+  citas: CitaDetalle[];
+  disponibilidad: Disponibilidad[];
   citasPorMedico: Array<{
     medico: string;
     especialidad: string;
@@ -27,10 +28,10 @@ export function generarReporteHTML(datos: DatosReporte): string {
   });
 
   const totalCitas = datos.citas.length;
-  const citasPendientes = datos.citas.filter(c => c.estado === 'pendiente').length;
-  const citasConfirmadas = datos.citas.filter(c => c.estado === 'confirmada').length;
-  const citasAtendidas = datos.citas.filter(c => c.estado === 'atendido').length;
-  const citasCanceladas = datos.citas.filter(c => c.estado === 'cancelada').length;
+  const citasPendientes = datos.citas.filter(c => c.estado_cita === 'pendiente').length;
+  const citasConfirmadas = datos.citas.filter(c => c.estado_cita === 'confirmada').length;
+  const citasAtendidas = datos.citas.filter(c => c.estado_cita === 'atendida').length;
+  const citasCanceladas = datos.citas.filter(c => c.estado_cita === 'cancelada').length;
   const citasNuevas = datos.citas.filter(c => c.tipo_cita === 'nueva').length;
   const citasControl = datos.citas.filter(c => c.tipo_cita === 'control').length;
 
@@ -61,7 +62,7 @@ export function generarReporteHTML(datos: DatosReporte): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte General - Clínica San Osorio</title>
+  <title>Reporte General - Clínica Santana</title>
   <style>
     * {
       margin: 0;
@@ -250,7 +251,7 @@ export function generarReporteHTML(datos: DatosReporte): string {
   
   <!-- HEADER -->
   <div class="header">
-    <h1>Clínica San Osorio</h1>
+    <h1>Clínica Santana</h1>
     <h2>Reporte General de Gestión</h2>
     <p class="fecha">Generado el: ${fecha}</p>
   </div>
@@ -386,20 +387,20 @@ export function generarReporteHTML(datos: DatosReporte): string {
       .reverse()
       .map(cita => {
         const estadoBadgeClass =
-          cita.estado === 'pendiente' ? 'badge-pendiente' :
-            cita.estado === 'confirmada' ? 'badge-confirmada' :
-              cita.estado === 'atendido' ? 'badge-atendido' : 'badge-cancelada';
+          cita.estado_cita === 'pendiente' ? 'badge-pendiente' :
+            cita.estado_cita === 'confirmada' ? 'badge-confirmada' :
+              cita.estado_cita === 'atendida' ? 'badge-atendido' : 'badge-cancelada';
 
         return `
               <tr>
                 <td>${cita.numero_seguimiento}</td>
-                <td>${cita.paciente_nombre}</td>
-                <td>${cita.medico_nombre}</td>
-                <td>${cita.fecha_cita.split('-').reverse().join('/')}</td>
+                <td>${cita.paciente_nombre || 'N/A'}</td>
+                <td>${cita.medico_nombre || 'N/A'}</td>
+                <td>${cita.fecha_cita ? cita.fecha_cita.split('-').reverse().join('/') : 'Pendiente'}</td>
                 <td>${cita.tipo_cita === 'nueva' ? 'Nueva' : 'Control'}</td>
-                <td><span class="badge ${estadoBadgeClass}">${cita.estado === 'pendiente' ? 'Pendiente' :
-            cita.estado === 'confirmada' ? 'Confirmada' :
-              cita.estado === 'atendido' ? 'Atendido' : 'Cancelada'
+                <td><span class="badge ${estadoBadgeClass}">${cita.estado_cita === 'pendiente' ? 'Pendiente' :
+            cita.estado_cita === 'confirmada' ? 'Confirmada' :
+              cita.estado_cita === 'atendida' ? 'Atendida' : 'Cancelada'
           }</span></td>
               </tr>
             `;
@@ -410,7 +411,7 @@ export function generarReporteHTML(datos: DatosReporte): string {
 
   <!-- FOOTER -->
   <div class="footer">
-    <p><strong>Clínica San Osorio</strong> - Sistema de Citas Médicas</p>
+    <p><strong>Clínica Santana</strong> - Sistema de Citas Médicas</p>
     <p>Este documento es confidencial y de uso exclusivo para fines administrativos</p>
   </div>
 </body>

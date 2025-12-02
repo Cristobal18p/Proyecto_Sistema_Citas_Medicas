@@ -5,12 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import {
-  Cita,
-  DisponibilidadMedico,
-  mockMedicos,
-  mockPacientes,
-} from "../../lib/mockData";
+import { CitaDetalle } from "../../types/cita";
+import { Disponibilidad } from "../../types/disponibilidad";
 import {
   BarChart3,
   TrendingUp,
@@ -28,8 +24,8 @@ import {
 } from "../../utils/generarReportePDF";
 
 interface ReportesGerenteProps {
-  citas: Cita[];
-  disponibilidad: DisponibilidadMedico[];
+  citas: CitaDetalle[];
+  disponibilidad: Disponibilidad[];
 }
 
 export function ReportesGerente({
@@ -38,34 +34,51 @@ export function ReportesGerente({
 }: ReportesGerenteProps) {
   // Estadísticas generales
   const totalCitas = citas.length;
-  const citasPendientes = citas.filter((c) => c.estado === "pendiente").length;
-  const citasConfirmadas = citas.filter(
-    (c) => c.estado === "confirmada"
+  const citasPendientes = citas.filter(
+    (c) => c.estado_cita === "pendiente"
   ).length;
-  const citasAtendidas = citas.filter((c) => c.estado === "atendido").length;
-  const citasCanceladas = citas.filter((c) => c.estado === "cancelada").length;
+  const citasConfirmadas = citas.filter(
+    (c) => c.estado_cita === "confirmada"
+  ).length;
+  const citasAtendidas = citas.filter(
+    (c) => c.estado_cita === "atendida"
+  ).length;
+  const citasCanceladas = citas.filter(
+    (c) => c.estado_cita === "cancelada"
+  ).length;
 
   // Citas por médico
-  const citasPorMedico = mockMedicos.map((medico) => ({
-    medico: medico.nombre_completo || "",
-    especialidad: medico.especialidad_nombre || "",
-    total: citas.filter((c) => c.id_medico === medico.id_medico).length,
-    atendidas: citas.filter(
-      (c) => c.id_medico === medico.id_medico && c.estado === "atendido"
-    ).length,
-    pendientes: citas.filter(
-      (c) => c.id_medico === medico.id_medico && c.estado === "pendiente"
-    ).length,
-  }));
+  // Agrupar citas por médico
+  const citasPorMedico = Array.from(
+    new Set(citas.map((c) => c.id_medico || c.medico_nombre))
+  ).map((medicoId) => {
+    const citasDelMedico = citas.filter(
+      (c) => c.id_medico === medicoId || c.medico_nombre === medicoId
+    );
+    const nombreMedico = citasDelMedico[0]?.medico_nombre || String(medicoId);
+    const especialidad = citasDelMedico[0]?.especialidad || "";
+
+    return {
+      medico: nombreMedico,
+      especialidad: especialidad,
+      total: citasDelMedico.length,
+      atendidas: citasDelMedico.filter((c) => c.estado_cita === "atendida")
+        .length,
+      pendientes: citasDelMedico.filter((c) => c.estado_cita === "pendiente")
+        .length,
+    };
+  });
 
   // Citas por tipo
   const citasNuevas = citas.filter((c) => c.tipo_cita === "nueva").length;
   const citasControl = citas.filter((c) => c.tipo_cita === "control").length;
 
   // Disponibilidad por médico
-  const horasPorMedico = mockMedicos.map((medico) => {
+  const horasPorMedico = Array.from(
+    new Set(disponibilidad.map((d) => d.id_medico))
+  ).map((medicoId) => {
     const horariosDelMedico = disponibilidad.filter(
-      (d) => d.id_medico === medico.id_medico
+      (d) => d.id_medico === medicoId
     );
     const totalHoras = horariosDelMedico.reduce((acc, h) => {
       const inicio = parseInt(h.hora_inicio.split(":")[0]);
@@ -74,8 +87,8 @@ export function ReportesGerente({
     }, 0);
 
     return {
-      medico: medico.nombre_completo || "",
-      especialidad: medico.especialidad_nombre || "",
+      medico: horariosDelMedico[0]?.nombre_medico || String(medicoId),
+      especialidad: horariosDelMedico[0]?.especialidad || "",
       diasDisponibles: [...new Set(horariosDelMedico.map((h) => h.dia_semana))]
         .length,
       horasSemanales: totalHoras,
@@ -153,7 +166,13 @@ export function ReportesGerente({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pacientes</p>
-                <p className="text-3xl mt-2">{mockPacientes.length}</p>
+                <p className="text-3xl mt-2">
+                  {
+                    new Set(
+                      citas.map((c) => c.id_paciente || c.paciente_nombre)
+                    ).size
+                  }
+                </p>
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
                 <Users className="w-6 h-6 text-purple-600" />

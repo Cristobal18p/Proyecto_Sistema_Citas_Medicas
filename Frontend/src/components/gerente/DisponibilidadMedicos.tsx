@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -26,28 +26,23 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import {
-  DisponibilidadMedico,
-  mockMedicos,
-  mockEspecialidades,
-} from "../../lib/mockData";
-import { Clock, Plus, Trash2, Calendar, Edit } from "lucide-react";
+  Disponibilidad,
+  CrearDisponibilidad,
+  DIAS_SEMANA,
+  DIAS_SEMANA_LABELS,
+  DiaSemana,
+} from "../../types/disponibilidad";
+import { Medico, Especialidad } from "../../types/medico";
+import { getMedicos } from "../../services/medicos";
+import { getEspecialidades } from "../../services/especialidad";
+import { Clock, Plus, Trash2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 interface DisponibilidadMedicosProps {
-  disponibilidad: DisponibilidadMedico[];
-  onNuevaDisponibilidad: (disponibilidad: DisponibilidadMedico) => void;
+  disponibilidad: Disponibilidad[];
+  onNuevaDisponibilidad: (disponibilidad: CrearDisponibilidad) => void;
   onEliminarDisponibilidad: (id: string) => void;
 }
-
-const diasSemana = [
-  "Lunes",
-  "Martes",
-  "Miércoles",
-  "Jueves",
-  "Viernes",
-  "Sábado",
-  "Domingo",
-] as const;
 
 export function DisponibilidadMedicos({
   disponibilidad,
@@ -55,50 +50,62 @@ export function DisponibilidadMedicos({
   onEliminarDisponibilidad,
 }: DisponibilidadMedicosProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [especialidadFiltro, setEspecialidadFiltro] = useState<string>(
-    mockEspecialidades[0]?.id_especialidad || "todas"
-  );
+  const [medicos, setMedicos] = useState<Medico[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
+  const [especialidadFiltro, setEspecialidadFiltro] = useState<string>("todas");
   const [especialidadFiltroSemanal, setEspecialidadFiltroSemanal] =
-    useState<string>(mockEspecialidades[0]?.id_especialidad || "todas");
-  const [editMode, setEditMode] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+    useState<string>("todas");
   const [formData, setFormData] = useState({
-    id_especialidad: "",
     id_medico: "",
-    dia_semana: "Lunes" as (typeof diasSemana)[number],
+    dia_semana: "lunes" as DiaSemana,
     hora_inicio: "",
     hora_fin: "",
   });
 
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      const [medicosData, especialidadesData] = await Promise.all([
+        getMedicos(),
+        getEspecialidades(),
+      ]);
+      setMedicos(medicosData);
+      setEspecialidades(especialidadesData);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      toast.error("Error al cargar médicos y especialidades");
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const medico = mockMedicos.find((m) => m.id_medico === formData.id_medico);
-    if (!medico) return;
+    // Validar que todos los campos estén llenos
+    if (!formData.id_medico || !formData.hora_inicio || !formData.hora_fin) {
+      toast.error("Por favor complete todos los campos");
+      return;
+    }
 
     // Verificar si ya existe disponibilidad para ese médico en ese día
     const existeDisponibilidad = disponibilidad.find(
       (d) =>
         d.id_medico === formData.id_medico &&
-        d.dia_semana === formData.dia_semana &&
-        (!editMode || d.id_disponibilidad !== editingId)
+        d.dia_semana === formData.dia_semana
     );
 
     if (existeDisponibilidad) {
       toast.error(
-        `Ya existe disponibilidad configurada para ${formData.dia_semana}. Por favor, edite el horario existente.`
+        `Ya existe disponibilidad configurada para ${
+          DIAS_SEMANA_LABELS[formData.dia_semana]
+        }`
       );
       return;
     }
 
-    if (editMode && editingId) {
-      // Modo edición: eliminar el anterior y agregar el nuevo
-      onEliminarDisponibilidad(editingId);
-    }
-
-    const nueva: DisponibilidadMedico = {
-      id_disponibilidad:
-        editMode && editingId ? editingId : `disp_${Date.now()}`,
+    const nueva: CrearDisponibilidad = {
       id_medico: formData.id_medico,
       dia_semana: formData.dia_semana,
       hora_inicio: formData.hora_inicio,
@@ -106,18 +113,10 @@ export function DisponibilidadMedicos({
     };
 
     onNuevaDisponibilidad(nueva);
-    toast.success(
-      editMode
-        ? "Disponibilidad actualizada exitosamente"
-        : "Disponibilidad agregada exitosamente"
-    );
     setDialogOpen(false);
-    setEditMode(false);
-    setEditingId(null);
     setFormData({
-      id_especialidad: "",
       id_medico: "",
-      dia_semana: "Lunes",
+      dia_semana: "lunes",
       hora_inicio: "",
       hora_fin: "",
     });
@@ -125,41 +124,44 @@ export function DisponibilidadMedicos({
 
   const eliminar = (id: string) => {
     onEliminarDisponibilidad(id);
-    toast.info("Disponibilidad eliminada");
   };
 
-  const editar = (disp: DisponibilidadMedico) => {
-    const medico = mockMedicos.find((m) => m.id_medico === disp.id_medico);
-    setFormData({
-      id_especialidad: medico?.id_especialidad || "",
-      id_medico: disp.id_medico,
-      dia_semana: disp.dia_semana,
-      hora_inicio: disp.hora_inicio,
-      hora_fin: disp.hora_fin,
-    });
-    setEditMode(true);
-    setEditingId(disp.id_disponibilidad);
-    setDialogOpen(true);
+  // Helper para formatear hora a formato 12 horas
+  const formatearHora = (hora: string): string => {
+    // Si viene en formato HH:MM:SS, tomar solo HH:MM
+    const tiempo = hora.substring(0, 5);
+    const [horas, minutos] = tiempo.split(":");
+    const h = parseInt(horas, 10);
+
+    // Convertir a formato 12 horas
+    const periodo = h >= 12 ? "PM" : "AM";
+    const hora12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+
+    return `${hora12}:${minutos} ${periodo}`;
   };
 
   // Filtrar médicos por especialidad para panel de configuración
   const medicosFiltrados =
     especialidadFiltro === "todas"
-      ? mockMedicos
-      : mockMedicos.filter((m) => m.id_especialidad === especialidadFiltro);
+      ? medicos
+      : medicos.filter(
+          (m: Medico) => String(m.id_especialidad) === especialidadFiltro
+        );
 
   // Filtrar médicos por especialidad para vista semanal
   const medicosFiltradosSemanal =
     especialidadFiltroSemanal === "todas"
-      ? mockMedicos
-      : mockMedicos.filter(
-          (m) => m.id_especialidad === especialidadFiltroSemanal
+      ? medicos
+      : medicos.filter(
+          (m: Medico) => String(m.id_especialidad) === especialidadFiltroSemanal
         );
 
   // Agrupar por médico (solo de la especialidad seleccionada)
-  const disponibilidadPorMedico = medicosFiltrados.map((medico) => ({
+  const disponibilidadPorMedico = medicosFiltrados.map((medico: Medico) => ({
     medico,
-    horarios: disponibilidad.filter((d) => d.id_medico === medico.id_medico),
+    horarios: disponibilidad.filter(
+      (d: Disponibilidad) => String(d.id_medico) === String(medico.id_medico)
+    ),
   }));
 
   return (
@@ -190,10 +192,10 @@ export function DisponibilidadMedicos({
                   <SelectItem value="todas">
                     Todas las especialidades
                   </SelectItem>
-                  {mockEspecialidades.map((esp) => (
+                  {especialidades.map((esp) => (
                     <SelectItem
                       key={esp.id_especialidad}
-                      value={esp.id_especialidad}
+                      value={String(esp.id_especialidad)}
                     >
                       {esp.nombre_especialidad}
                     </SelectItem>
@@ -210,45 +212,13 @@ export function DisponibilidadMedicos({
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>
-                    {editMode ? "Editar" : "Agregar"} Disponibilidad
-                  </DialogTitle>
+                  <DialogTitle>Agregar Disponibilidad</DialogTitle>
                   <DialogDescription>
-                    {editMode ? "Modifique" : "Configure"} el horario de
-                    atención del médico
+                    Configure el horario de atención del médico
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Especialidad */}
-                  <div className="space-y-2">
-                    <Label htmlFor="especialidad">Especialidad *</Label>
-                    <Select
-                      value={formData.id_especialidad}
-                      onValueChange={(value: string) => {
-                        setFormData({
-                          ...formData,
-                          id_especialidad: value,
-                          id_medico: "",
-                        });
-                      }}
-                      required
-                    >
-                      <SelectTrigger id="especialidad">
-                        <SelectValue placeholder="Seleccione especialidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockEspecialidades.map((esp) => (
-                          <SelectItem
-                            key={esp.id_especialidad}
-                            value={esp.id_especialidad}
-                          >
-                            {esp.nombre_especialidad}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                  {/* Médico */}
                   <div className="space-y-2">
                     <Label htmlFor="medico">Médico *</Label>
                     <Select
@@ -257,43 +227,40 @@ export function DisponibilidadMedicos({
                         setFormData({ ...formData, id_medico: value })
                       }
                       required
-                      disabled={editMode || !formData.id_especialidad}
                     >
                       <SelectTrigger id="medico">
                         <SelectValue placeholder="Seleccione un médico" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockMedicos
-                          .filter(
-                            (m) =>
-                              !formData.id_especialidad ||
-                              m.id_especialidad === formData.id_especialidad
-                          )
-                          .map((m) => (
-                            <SelectItem key={m.id_medico} value={m.id_medico}>
-                              {m.nombre_completo}
-                            </SelectItem>
-                          ))}
+                        {medicos.map((m) => (
+                          <SelectItem
+                            key={m.id_medico}
+                            value={String(m.id_medico)}
+                          >
+                            {m.nombre_completo}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
+                  {/* Día de la semana */}
                   <div className="space-y-2">
                     <Label htmlFor="dia">Día de la Semana *</Label>
                     <Select
                       value={formData.dia_semana}
-                      onValueChange={(value: (typeof diasSemana)[number]) =>
+                      onValueChange={(value: DiaSemana) =>
                         setFormData({ ...formData, dia_semana: value })
                       }
-                      disabled={editMode}
+                      required
                     >
                       <SelectTrigger id="dia">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {diasSemana.map((dia) => (
+                        {DIAS_SEMANA.map((dia) => (
                           <SelectItem key={dia} value={dia}>
-                            {dia}
+                            {DIAS_SEMANA_LABELS[dia]}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -338,17 +305,11 @@ export function DisponibilidadMedicos({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setDialogOpen(false);
-                        setEditMode(false);
-                        setEditingId(null);
-                      }}
+                      onClick={() => setDialogOpen(false)}
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit">
-                      {editMode ? "Actualizar" : "Guardar"}
-                    </Button>
+                    <Button type="submit">Guardar</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -384,7 +345,7 @@ export function DisponibilidadMedicos({
                   </p>
                 ) : (
                   <div className="space-y-1">
-                    {diasSemana.map((dia) => {
+                    {DIAS_SEMANA.map((dia) => {
                       const horariosDelDia = horarios.filter(
                         (h) => h.dia_semana === dia
                       );
@@ -398,44 +359,33 @@ export function DisponibilidadMedicos({
                           <div className="flex items-center gap-2 flex-1">
                             <Badge
                               variant="outline"
-                              className="min-w-20 text-xs"
+                              className="min-w-20 text-xs font-semibold"
                             >
-                              {dia}
+                              {DIAS_SEMANA_LABELS[dia]}
                             </Badge>
                             <div className="flex flex-wrap gap-2">
                               {horariosDelDia.map((h) => (
                                 <span
                                   key={h.id_disponibilidad}
-                                  className="text-sm"
+                                  className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded"
                                 >
-                                  {h.hora_inicio} - {h.hora_fin}
+                                  {formatearHora(h.hora_inicio)} -{" "}
+                                  {formatearHora(h.hora_fin)}
                                 </span>
                               ))}
                             </div>
                           </div>
                           <div className="flex gap-1">
                             {horariosDelDia.map((h) => (
-                              <div
+                              <Button
                                 key={h.id_disponibilidad}
-                                className="flex gap-1"
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => eliminar(h.id_disponibilidad)}
                               >
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-blue-600 hover:text-blue-700"
-                                  onClick={() => editar(h)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-red-600 hover:text-red-700"
-                                  onClick={() => eliminar(h.id_disponibilidad)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             ))}
                           </div>
                         </div>
@@ -468,10 +418,10 @@ export function DisponibilidadMedicos({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas las especialidades</SelectItem>
-                {mockEspecialidades.map((esp) => (
+                {especialidades.map((esp) => (
                   <SelectItem
                     key={esp.id_especialidad}
-                    value={esp.id_especialidad}
+                    value={String(esp.id_especialidad)}
                   >
                     {esp.nombre_especialidad}
                   </SelectItem>
@@ -497,12 +447,12 @@ export function DisponibilidadMedicos({
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2 font-medium">Médico</th>
-                    {diasSemana.map((dia) => (
+                    {DIAS_SEMANA.map((dia) => (
                       <th
                         key={dia}
                         className="text-left p-2 font-medium text-sm"
                       >
-                        {dia}
+                        {DIAS_SEMANA_LABELS[dia]}
                       </th>
                     ))}
                   </tr>
@@ -510,7 +460,7 @@ export function DisponibilidadMedicos({
                 <tbody>
                   {medicosFiltradosSemanal.map((medico) => {
                     const horariosDelMedico = disponibilidad.filter(
-                      (d) => d.id_medico === medico.id_medico
+                      (d) => String(d.id_medico) === String(medico.id_medico)
                     );
 
                     return (
@@ -528,7 +478,7 @@ export function DisponibilidadMedicos({
                             </p>
                           </div>
                         </td>
-                        {diasSemana.map((dia) => {
+                        {DIAS_SEMANA.map((dia) => {
                           const horariosDelDia = horariosDelMedico.filter(
                             (h) => h.dia_semana === dia
                           );
@@ -540,9 +490,10 @@ export function DisponibilidadMedicos({
                                   {horariosDelDia.map((h) => (
                                     <div
                                       key={h.id_disponibilidad}
-                                      className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded"
+                                      className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-medium whitespace-nowrap"
                                     >
-                                      {h.hora_inicio}-{h.hora_fin}
+                                      {formatearHora(h.hora_inicio)} -{" "}
+                                      {formatearHora(h.hora_fin)}
                                     </div>
                                   ))}
                                 </div>
