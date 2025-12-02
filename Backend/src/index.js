@@ -10,6 +10,10 @@ import usuarioRoutes from "./routes/usuario.routes.js";
 import especialidadesRoutes from "./routes/especialidad.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import historialRoutes from "./routes/historial.routes.js";
+import disponibilidadRoutes from "./routes/disponibilidad.routes.js";
+
+// Importar jobs
+import { iniciarCronRecordatorios } from "./jobs/recordatorios.job.js";
 
 dotenv.config();
 
@@ -25,12 +29,15 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/especialidades", especialidadesRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/historial", historialRoutes);
+app.use("/api/disponibilidad", disponibilidadRoutes);
 
 app.get("/", (req, res) =>
   res.send("API Clínica Médica funcionando correctamente")
 );
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  // Iniciar el cron job de recordatorios
+  iniciarCronRecordatorios();
+});
