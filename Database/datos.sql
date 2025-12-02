@@ -108,6 +108,31 @@ VALUES
 ('Dermatología'),
 ('Cardiología');
 
+-- Tabla para registrar notificaciones/recordatorios enviados
+CREATE TABLE notificacion_cita (
+    id_notificacion SERIAL PRIMARY KEY,
+    id_cita INTEGER NOT NULL REFERENCES citas(id_cita) ON DELETE CASCADE,
+    tipo_notificacion VARCHAR(50) NOT NULL 
+        CHECK (tipo_notificacion IN ('solicitud', 'confirmacion', 'recordatorio_24h')),
+    email_destinatario VARCHAR(255) NOT NULL,
+    asunto VARCHAR(255) NOT NULL,
+    fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(20) DEFAULT 'enviado' 
+        CHECK (estado IN ('enviado', 'fallido', 'pendiente')),
+    mensaje_error TEXT,
+    fecha_programada TIMESTAMP, -- Para recordatorios programados
+    CONSTRAINT unique_notificacion UNIQUE (id_cita, tipo_notificacion)
+);
+
+-- Índices para mejorar rendimiento
+CREATE INDEX idx_notificacion_cita ON notificacion_cita(id_cita);
+CREATE INDEX idx_notificacion_tipo ON notificacion_cita(tipo_notificacion);
+CREATE INDEX idx_notificacion_estado ON notificacion_cita(estado);
+CREATE INDEX idx_notificacion_fecha_programada ON notificacion_cita(fecha_programada);
+
+
+
+
 
 select * from usuario_sistema; 
 
