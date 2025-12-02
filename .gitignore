@@ -5,6 +5,15 @@ node_modules/
 Backend/node_modules/
 Frontend/node_modules/
 Backend/node_modules/body-parser/
+
+# ===== Lock files (excluir de control de versiones) =====
+package-lock.json
+Backend/package-lock.json
+Backend/package.json
+Frontend/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
 # ===== Entornos =====
 .env
 .env.*
