@@ -9,14 +9,14 @@ import {
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { Usuario } from "../types/login";
+import { Login } from "../types/login";
 import { loginUsuario } from "../services/usuario";
 
 import { AlertCircle, Users } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 
 interface LoginPageProps {
-  onLogin: (user: Usuario) => void;
+  onLogin: (user: Login) => void;
   onPortalPaciente?: () => void;
 }
 export function LoginPage({ onLogin, onPortalPaciente }: LoginPageProps) {
@@ -128,7 +128,10 @@ export function LoginPage({ onLogin, onPortalPaciente }: LoginPageProps) {
                 />
               </div>
 
-              <Button type="submit" className="w-full h-11 text-base font-semibold mt-6">
+              <Button
+                type="submit"
+                className="w-full h-11 text-base font-semibold mt-6"
+              >
                 Iniciar Sesión
               </Button>
             </form>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Usuario } from "../types/login";
+import { Login } from "../types/login";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LogOut, Calendar, BarChart3, Clock } from "lucide-react";
@@ -12,7 +12,7 @@ import {
 } from "../lib/mockData";
 
 interface GerenteDashboardProps {
-  user: Usuario;
+  user: Login;
   onLogout: () => void;
 }
 
@@ -44,9 +44,7 @@ export function GerenteDashboard({ user, onLogout }: GerenteDashboardProps) {
                 <h1 className="text-xl font-bold text-blue-900">
                   Panel de Gerencia
                 </h1>
-                <p className="text-sm text-gray-600">
-                  {user.nombre_completo}
-                </p>
+                <p className="text-sm text-gray-600">{user.nombre_completo}</p>
               </div>
             </div>
             <Button

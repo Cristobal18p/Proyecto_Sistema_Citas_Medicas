@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -25,17 +26,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { Usuario, UserRole } from "../../App";
-import { Medico, mockEspecialidades } from "../../lib/mockData";
+import { UserRole } from "../../types/login";
+import { Usuario, CrearUsuario, ActualizarUsuario } from "../../types/usuario";
+import { Medico, Especialidad } from "../../types/medico";
+import { getEspecialidades } from "../../services/especialidad";
+
 import { Users, Plus, Edit, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface GestionUsuariosProps {
   usuarios: Usuario[];
   medicos: Medico[];
-  onNuevoUsuario: (usuario: Usuario) => void;
-  onActualizarUsuario: (usuario: Usuario) => void;
+  onNuevoUsuario: (
+    usuario: CrearUsuario,
+    datosMedico?: {
+      id_especialidad: string;
+      email_contacto: string;
+      telefono_contacto: string;
+    }
+  ) => void;
+  onActualizarUsuario: (id_usuario: string, datos: ActualizarUsuario) => void;
   onNuevoMedico: (medico: Medico) => void;
+  onActualizarMedico: (
+    id_medico: string,
+    datos: {
+      id_especialidad: string;
+      email_contacto: string;
+      telefono_contacto: string;
+    }
+  ) => void;
 }
 
 export function GestionUsuarios({
@@ -44,24 +63,41 @@ export function GestionUsuarios({
   onNuevoUsuario,
   onActualizarUsuario,
   onNuevoMedico,
+  onActualizarMedico,
 }: GestionUsuariosProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editando, setEditando] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
 
   const [formData, setFormData] = useState({
     nombre_usuario: "",
     nombre: "",
     apellido: "",
     password: "",
-    rol: "recepcion" as UserRole,
+    rol: "recepcionista" as UserRole,
     estado: "activo" as "activo" | "inactivo" | "bloqueado",
     // Datos adicionales para médicos
     id_especialidad: "",
     email_contacto: "",
     telefono_contacto: "",
+    // Control para cambiar contraseña
+    cambiarContrasena: false,
   });
+
+  useEffect(() => {
+    const cargarEspecialidades = async () => {
+      try {
+        const data = await getEspecialidades();
+        setEspecialidades(data);
+      } catch (error) {
+        console.error("Error al cargar especialidades", error);
+      }
+    };
+
+    cargarEspecialidades();
+  }, []);
 
   const abrirDialogoNuevo = () => {
     setEditando(false);
@@ -71,11 +107,12 @@ export function GestionUsuarios({
       nombre: "",
       apellido: "",
       password: "",
-      rol: "recepcion",
+      rol: "recepcionista",
       estado: "activo",
       id_especialidad: "",
       email_contacto: "",
       telefono_contacto: "",
+      cambiarContrasena: false,
     });
     setDialogOpen(true);
   };
@@ -84,31 +121,41 @@ export function GestionUsuarios({
     setEditando(true);
     setUsuarioEditando(usuario);
 
-    let datosMedico = {
-      id_especialidad: "",
-      email_contacto: "",
-      telefono_contacto: "",
-    };
-    if (usuario.rol === "medico" && usuario.id_medico) {
-      const medico = medicos.find((m) => m.id_medico === usuario.id_medico);
-      if (medico) {
-        datosMedico = {
-          id_especialidad: medico.id_especialidad,
-          email_contacto: medico.email_contacto,
-          telefono_contacto: medico.telefono_contacto,
-        };
-      }
-    }
-
+    // Datos base del usuario
     setFormData({
       nombre_usuario: usuario.nombre_usuario,
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
+      nombre: usuario.nombre || "",
+      apellido: usuario.apellido || "",
       password: "",
       rol: usuario.rol,
       estado: usuario.estado,
-      ...datosMedico,
+      id_especialidad: "",
+      email_contacto: "",
+      telefono_contacto: "",
+      cambiarContrasena: false,
     });
+
+    // Si es médico, intentar cargar sus datos asociados
+    if (usuario.rol === "medico") {
+      const medico = medicos.find(
+        (m) => String(m.id_usuario) === String(usuario.id_usuario)
+      );
+
+      if (medico) {
+        const idEsp = String(medico.id_especialidad);
+        const existeEnCatalogo = especialidades.some(
+          (esp) => String(esp.id_especialidad) === idEsp
+        );
+
+        setFormData((prev) => ({
+          ...prev,
+          id_especialidad: existeEnCatalogo ? idEsp : "",
+          email_contacto: medico.email_contacto ?? "",
+          telefono_contacto: medico.telefono_contacto ?? "",
+        }));
+      }
+    }
+
     setDialogOpen(true);
   };
 
@@ -117,36 +164,7 @@ export function GestionUsuarios({
 
     if (editando && usuarioEditando) {
       // Actualizar usuario
-      const usuarioActualizado: Usuario = {
-        ...usuarioEditando,
-        nombre: formData.nombre,
-        apellido: formData.apellido,
-        rol: formData.rol,
-        estado: formData.estado,
-      };
-      onActualizarUsuario(usuarioActualizado);
-
-      // Si cambió a rol médico y no tenía datos de médico, crearlos
-      if (formData.rol === "medico" && !usuarioEditando.id_medico) {
-        const nuevoMedico: Medico = {
-          id_medico: `med_${Date.now()}`,
-          id_usuario: usuarioEditando.id_usuario,
-          id_especialidad: formData.id_especialidad,
-          email_contacto: formData.email_contacto,
-          telefono_contacto: formData.telefono_contacto,
-        };
-        onNuevoMedico(nuevoMedico);
-
-        // Actualizar usuario con id_medico
-        usuarioActualizado.id_medico = nuevoMedico.id_medico;
-        onActualizarUsuario(usuarioActualizado);
-      }
-
-      toast.success("Usuario actualizado exitosamente");
-    } else {
-      // Crear nuevo usuario
-      const nuevoUsuario: Usuario = {
-        id_usuario: `usr_${Date.now()}`,
+      const datosActualizar: ActualizarUsuario = {
         nombre_usuario: formData.nombre_usuario,
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -154,20 +172,80 @@ export function GestionUsuarios({
         estado: formData.estado,
       };
 
-      // Si es médico, crear también el registro de médico
+      // Solo incluir contraseña si se marcó cambiar
+      if (formData.cambiarContrasena && formData.password) {
+        datosActualizar.contrasena = formData.password;
+      }
+
+      onActualizarUsuario(usuarioEditando.id_usuario, datosActualizar);
+
+      // Gestión de datos de médico
       if (formData.rol === "medico") {
-        const nuevoMedico: Medico = {
-          id_medico: `med_${Date.now()}`,
-          id_usuario: nuevoUsuario.id_usuario,
+        // Buscar el médico por id_usuario en el array de médicos
+        const medicoExistente = medicos.find(
+          (m) => String(m.id_usuario) === String(usuarioEditando.id_usuario)
+        );
+
+        if (!medicoExistente) {
+          // Si cambió a rol médico y no tenía datos de médico, crearlos
+          const nuevoMedico: Medico = {
+            id_medico: "",
+            id_usuario: usuarioEditando.id_usuario,
+            id_especialidad: formData.id_especialidad,
+            email_contacto: formData.email_contacto,
+            telefono_contacto: formData.telefono_contacto,
+          };
+          onNuevoMedico(nuevoMedico);
+        } else {
+          // Si ya era médico, actualizar sus datos usando el id_medico correcto
+          onActualizarMedico(medicoExistente.id_medico, {
+            id_especialidad: formData.id_especialidad,
+            email_contacto: formData.email_contacto,
+            telefono_contacto: formData.telefono_contacto,
+          });
+        }
+      }
+
+      toast.success("Usuario actualizado exitosamente");
+    } else {
+      // Validar que tenga contraseña al crear
+      if (!formData.password) {
+        toast.error("La contraseña es requerida para crear un usuario");
+        return;
+      }
+
+      // Crear nuevo usuario - solo enviar: nombre_usuario, nombre, apellido, contraseña, rol, estado
+      const nuevoUsuario: CrearUsuario = {
+        nombre_usuario: formData.nombre_usuario,
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        contrasena: formData.password,
+        rol: formData.rol,
+        estado: formData.estado,
+      };
+
+      // Si es médico, preparar datos del médico para enviar después de crear usuario
+      let datosMedico:
+        | {
+            id_especialidad: string;
+            email_contacto: string;
+            telefono_contacto: string;
+          }
+        | undefined = undefined;
+
+      if (formData.rol === "medico") {
+        if (!formData.id_especialidad) {
+          toast.error("Debe seleccionar una especialidad para el médico");
+          return;
+        }
+        datosMedico = {
           id_especialidad: formData.id_especialidad,
           email_contacto: formData.email_contacto,
           telefono_contacto: formData.telefono_contacto,
         };
-        onNuevoMedico(nuevoMedico);
-        nuevoUsuario.id_medico = nuevoMedico.id_medico;
       }
 
-      onNuevoUsuario(nuevoUsuario);
+      onNuevoUsuario(nuevoUsuario, datosMedico);
       toast.success("Usuario creado exitosamente");
     }
 
@@ -178,13 +256,13 @@ export function GestionUsuarios({
     (u) =>
       busqueda === "" ||
       u.nombre_usuario.toLowerCase().includes(busqueda.toLowerCase()) ||
-      u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      u.apellido.toLowerCase().includes(busqueda.toLowerCase())
+      u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      u.apellido?.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   const getRolBadge = (rol: UserRole) => {
     const badges = {
-      recepcion: (
+      recepcionista: (
         <Badge
           variant="outline"
           className="bg-blue-50 text-blue-700 border-blue-200"
@@ -208,7 +286,7 @@ export function GestionUsuarios({
           Gerente
         </Badge>
       ),
-      administrador: (
+      admin: (
         <Badge
           variant="outline"
           className="bg-red-50 text-red-700 border-red-200"
@@ -297,7 +375,6 @@ export function GestionUsuarios({
                         })
                       }
                       required
-                      disabled={editando}
                     />
                   </div>
 
@@ -331,7 +408,7 @@ export function GestionUsuarios({
                     />
                   </div>
 
-                  {/* Contraseña */}
+                  {/* Contraseña (crear nuevo) */}
                   {!editando && (
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="password">Contraseña *</Label>
@@ -343,8 +420,48 @@ export function GestionUsuarios({
                         onChange={(e) =>
                           setFormData({ ...formData, password: e.target.value })
                         }
-                        required={!editando}
+                        required
                       />
+                    </div>
+                  )}
+
+                  {/* Cambiar contraseña (editar) */}
+                  {editando && (
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Checkbox
+                          id="cambiarContrasena"
+                          checked={formData.cambiarContrasena}
+                          onCheckedChange={(checked: boolean) =>
+                            setFormData({
+                              ...formData,
+                              cambiarContrasena: checked === true,
+                              password:
+                                checked === true ? formData.password : "",
+                            })
+                          }
+                        />
+                        <Label
+                          htmlFor="cambiarContrasena"
+                          className="cursor-pointer"
+                        >
+                          Cambiar contraseña
+                        </Label>
+                      </div>
+                      {formData.cambiarContrasena && (
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Nueva contraseña"
+                          value={formData.password}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              password: e.target.value,
+                            })
+                          }
+                        />
+                      )}
                     </div>
                   )}
 
@@ -361,12 +478,10 @@ export function GestionUsuarios({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="recepcion">Recepción</SelectItem>
+                        <SelectItem value="recepcionista">Recepción</SelectItem>
                         <SelectItem value="medico">Médico</SelectItem>
                         <SelectItem value="gerente">Gerente</SelectItem>
-                        <SelectItem value="administrador">
-                          Administrador
-                        </SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -402,7 +517,7 @@ export function GestionUsuarios({
                       <div className="space-y-2">
                         <Label htmlFor="especialidad">Especialidad *</Label>
                         <Select
-                          value={formData.id_especialidad}
+                          value={formData.id_especialidad || ""}
                           onValueChange={(value: string) =>
                             setFormData({ ...formData, id_especialidad: value })
                           }
@@ -411,10 +526,10 @@ export function GestionUsuarios({
                             <SelectValue placeholder="Seleccione una especialidad" />
                           </SelectTrigger>
                           <SelectContent>
-                            {mockEspecialidades.map((esp) => (
+                            {especialidades.map((esp: Especialidad) => (
                               <SelectItem
-                                key={esp.id_especialidad}
-                                value={esp.id_especialidad}
+                                key={String(esp.id_especialidad)}
+                                value={String(esp.id_especialidad)}
                               >
                                 {esp.nombre_especialidad}
                               </SelectItem>
@@ -520,11 +635,6 @@ export function GestionUsuarios({
                     <p className="text-sm text-gray-600">
                       Usuario: {usuario.nombre_usuario}
                     </p>
-                    {usuario.rol === "medico" && usuario.id_medico && (
-                      <p className="text-sm text-gray-500">
-                        ID Médico: {usuario.id_medico}
-                      </p>
-                    )}
                   </div>
 
                   <Button
@@ -551,7 +661,7 @@ export function GestionUsuarios({
             </div>
             <div>
               <p className="text-2xl text-blue-600">
-                {usuarios.filter((u) => u.rol === "recepcion").length}
+                {usuarios.filter((u) => u.rol === "recepcionista").length}
               </p>
               <p className="text-sm text-gray-600">Recepción</p>
             </div>
@@ -569,7 +679,7 @@ export function GestionUsuarios({
             </div>
             <div>
               <p className="text-2xl text-red-600">
-                {usuarios.filter((u) => u.rol === "administrador").length}
+                {usuarios.filter((u) => u.rol === "admin").length}
               </p>
               <p className="text-sm text-gray-600">Admins</p>
             </div>

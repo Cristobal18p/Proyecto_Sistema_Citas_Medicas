@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Usuario } from "../types/login";
+import { Login } from "../types/login";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import {
@@ -24,7 +24,7 @@ import { getMedicos, getEspecialidades } from "../services/medicos";
 import { Medico, Especialidad } from "../types/medico";
 
 interface RecepcionDashboardProps {
-  user: Usuario;
+  user: Login;
   onLogout: () => void;
 }
 
@@ -38,27 +38,27 @@ export function RecepcionDashboard({
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [citasData, pacientesData, medicosData, especialidadesData] =
-          await Promise.all([
-            getCitas(),
-            getPacientes(),
-            getMedicos(),
-            getEspecialidades(),
-          ]);
-
-        setCitas(citasData);
-        setPacientes(pacientesData);
-        setMedicos(medicosData);
-        setEspecialidades(especialidadesData);
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-      }
-    };
-
     cargarDatos();
   }, []);
+
+  const cargarDatos = async () => {
+    try {
+      const [citasData, pacientesData, medicosData, especialidadesData] =
+        await Promise.all([
+          getCitas(),
+          getPacientes(),
+          getMedicos(),
+          getEspecialidades(),
+        ]);
+
+      setCitas(citasData);
+      setPacientes(pacientesData);
+      setMedicos(medicosData);
+      setEspecialidades(especialidadesData);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+    }
+  };
 
   const handleNuevaCita = (nuevaCita: CitaDetalle) => {
     setCitas([...citas, nuevaCita]);
@@ -68,7 +68,8 @@ export function RecepcionDashboard({
     setPacientes([...pacientes, nuevoPaciente]);
   };
 
-  const handleActualizarCita = (citaActualizada: CitaDetalle) => {
+  const handleActualizarCita = async (citaActualizada: CitaDetalle) => {
+    // Actualizar inmediatamente en el estado local para respuesta rápida
     setCitas(
       citas.map((c) =>
         c.numero_seguimiento === citaActualizada.numero_seguimiento
@@ -76,6 +77,9 @@ export function RecepcionDashboard({
           : c
       )
     );
+
+    // Recargar desde la BD para asegurar datos actualizados
+    await cargarDatos();
   };
 
   return (

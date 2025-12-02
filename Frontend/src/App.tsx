@@ -6,16 +6,16 @@ import { GerenteDashboard } from "./components/GerenteDashboard";
 import { AdministradorDashboard } from "./components/AdministradorDashboard";
 import { PortalPaciente } from "./components/PortalPaciente";
 import { Toaster } from "sonner";
-import { Usuario } from "./types/login";
+import { Login } from "./types/login";
 import { Button } from "./components/ui/button";
 
 type View = "login" | "portal" | "dashboard";
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
+  const [currentUser, setCurrentUser] = useState<Login | null>(null);
   const [currentView, setCurrentView] = useState<View>("login");
 
-  const handleLogin = (user: Usuario) => {
+  const handleLogin = (user: Login) => {
     setCurrentUser(user);
     setCurrentView("dashboard");
   };

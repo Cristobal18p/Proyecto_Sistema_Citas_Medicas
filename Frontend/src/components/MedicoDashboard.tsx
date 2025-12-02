@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Usuario } from "../types/login";
+import { Login } from "../types/login";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LogOut, Calendar, ClipboardList, Clock } from "lucide-react";
@@ -11,7 +11,7 @@ import { getHistoriales } from "../services/historial";
 import { toast } from "sonner";
 
 interface MedicoDashboardProps {
-  user: Usuario;
+  user: Login;
   onLogout: () => void;
 }
 
